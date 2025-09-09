@@ -8,26 +8,26 @@ import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 class MainProvider extends ChangeNotifier {
-  // ----------- Status / Zeiten -----------
+  // Status/Time
   bool _recording = false;
   DateTime? _startTime;
   DateTime? _endTime;
   Duration _elapsed = Duration.zero;
   Timer? _uiTimer;
 
-  // ----------- Live-Metriken -----------
+  // Live Metrics
   double _speedKmh = 0;
   double _gForce = 0;
   double _leanDeg = 0;
   Duration _cornerDur = Duration.zero;
 
-  // ----------- Maxima -----------
+  // Maxima/Highest Statistics
   double _maxSpeed = 0;
   double _maxG = 0;
   double _maxLean = 0;
   Duration _longestCorner = Duration.zero;
 
-  // ----------- Streams / Timer -----------
+  // Streams/Timer
   StreamSubscription<Position>? _posSub;
   StreamSubscription<AccelerometerEvent>? _accSub;
   Timer? _sampler;
@@ -35,7 +35,7 @@ class MainProvider extends ChangeNotifier {
 
   static const Duration _sampleEvery = Duration(milliseconds: 250); // 4 Hz
 
-  // ----------- Public Getter -----------
+  // Public Getter
   bool get recording => _recording;
   Duration get elapsed => _elapsed;
 
@@ -49,14 +49,14 @@ class MainProvider extends ChangeNotifier {
   double get maxLean => _maxLean;
   Duration get longestCorner => _longestCorner;
 
-  // ----------- Lifecycle -----------
+  // Lifecycle
   @override
   void dispose() {
     _stopStreams();
     super.dispose();
   }
 
-  // ----------- API: Start/Stop -----------
+  // Start/Stop API
   Future<bool> startRecording() async {
     final ok = await _ensureLocationPermission();
     if (!ok) return false;
@@ -121,17 +121,18 @@ class MainProvider extends ChangeNotifier {
       _gForce = g;
       if (g > _maxG) _maxG = g;
 
-      // Lean quer (links/rechts): ay vs az
-      /*
+      // Calculate Lean-Angle in Rad
+      // acc.y = seitliche Beschleunigung
+      // acc.z = vertikale Beschleunigung (Schwerkraft)
+      // atan2 gibt den Winkel zwischen -π und +π zurück.
       final leanRad = math.atan2(acc.y, acc.z);
-      _leanDeg = (leanRad.abs() * 180 / math.pi);
-      if (_leanDeg > _maxLean) _maxLean = _leanDeg;*/
 
-      final leanRad = math.atan2(acc.y, acc.z);
+      // +deg = Lean to the Right
+      // -deg = Lean to the left
       final leanDegSigned = (leanRad * 180 / math.pi);
-      _leanDeg = leanDegSigned;                // Vorzeichen behalten!
+      _leanDeg = leanDegSigned;
       if (leanDegSigned.abs() > _maxLean) {
-        _maxLean = leanDegSigned.abs();        // Max weiterhin als Betrag erfassen
+        _maxLean = leanDegSigned.abs();
       }
 
       notifyListeners();
@@ -155,8 +156,7 @@ class MainProvider extends ChangeNotifier {
     return true;
   }
 
-  /// Stoppt die Aufnahme. Wenn [save] true ist, wird an Firestore gespeichert.
-  /// [customTitle] kann vom UI übergeben werden (Dialog).
+  // Stops the recording when save = true. Recording will be sent to Firestore.
   Future<void> stopRecording({required bool save, String? customTitle}) async {
     if (!_recording) return;
 
@@ -169,8 +169,11 @@ class MainProvider extends ChangeNotifier {
     if (_cornerDur > _longestCorner) _longestCorner = _cornerDur;
     _endTime = DateTime.now();
 
+    // Dialogue for Custom Title
     if (save && _startTime != null && _endTime != null) {
+      //Check if a custom Title was set
       final title = (customTitle == null || customTitle.trim().isEmpty)
+        // If no Custom Title, set 'default' naming scheme with Date
           ? 'Fahrt ${DateTime.now().toLocal()}'
           : customTitle.trim();
 
@@ -180,9 +183,11 @@ class MainProvider extends ChangeNotifier {
           .doc(uid)
           .collection('rides');
 
+      // Calculate Duration
       final durationMs =
           _endTime!.millisecondsSinceEpoch - _startTime!.millisecondsSinceEpoch;
 
+      // Add Ride Details to Recording
       await ridesCol.add({
         'title': title,
         'date': _fmtDate(_startTime!),
@@ -201,11 +206,13 @@ class MainProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Discard Recording
   Future<void> discardRecording() async {
     if (!_recording) return;
     await stopRecording(save: false);
   }
 
+  // Stop all Subscriptions when Stream ends
   void _stopStreams() {
     _uiTimer?.cancel();
     _sampler?.cancel();
@@ -213,7 +220,7 @@ class MainProvider extends ChangeNotifier {
     _accSub?.cancel();
   }
 
-  // ----------- Utils -----------
+  // Ask for Location-Permissions
   Future<bool> _ensureLocationPermission() async {
     final enabled = await Geolocator.isLocationServiceEnabled();
     if (!enabled) return false;
@@ -225,6 +232,7 @@ class MainProvider extends ChangeNotifier {
         perm == LocationPermission.always;
   }
 
+  // Buuld Duration String
   String _fmtDur(Duration d) {
     final h = d.inHours.toString().padLeft(2, '0');
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -232,6 +240,7 @@ class MainProvider extends ChangeNotifier {
     return '$h:$m:$s';
   }
 
+  // Build Date String
   String _fmtDate(DateTime dt) {
     final y = dt.year.toString().padLeft(4, '0');
     final mo = dt.month.toString().padLeft(2, '0');
@@ -239,9 +248,18 @@ class MainProvider extends ChangeNotifier {
     return '$y-$mo-$da';
   }
 
+  // Rounds number (v) to a defined amount of digits (digits)
   double _round(double v, int digits) => double.parse(v.toStringAsFixed(digits));
+
+  // Convert degrees (d) to rad using trigonometry
+  // 180° = π rad
   double _deg2rad(double d) => d * (math.pi / 180.0);
 
+  // Calculate distance between two GPS-Coordinates
+  // Formula:
+  //   a = sin²(Δlat/2) + cos(lat1) * cos(lat2) * sin²(Δlon/2)
+  //   c = 2 * atan2(√a, √(1-a))
+  //   d = R * c   (R = Earthradius in Meters)
   double _haversineMeters(
       double lat1, double lon1, double lat2, double lon2) {
     const R = 6371000.0;

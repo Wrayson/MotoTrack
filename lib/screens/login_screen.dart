@@ -1,16 +1,9 @@
+// Aus der Vorlage vom Unterricht bezogen (Files.zip)!
+
 import 'package:firebase_auth/firebase_auth.dart';
-// Firebase Auth wird genutzt, um Login / Registrierung zu ermöglichen
-
 import 'package:flutter/material.dart';
-// Material Design Widgets (Scaffold, AppBar, Buttons, TextFields, etc.)
-
 import 'package:mototrack/screens/home_menu_screen.dart';
-// Screen, zu dem navigiert wird, wenn Login/Registrierung erfolgreich ist
 
-// LoginScreen ist ein StatefulWidget, da wir dynamische Zustände haben:
-// - Login oder Register Ansicht
-// - Ladezustand (Spinner)
-// - Eingaben in Textfeldern
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -19,26 +12,24 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Schlüssel für das Formular, damit wir Form-Validation nutzen können
   final _formKey = GlobalKey<FormState>();
 
-  // Controller für die Eingabefelder (TextEditingController speichert und liest den Wert der Textfelder)
+  // Controller for Email and Password
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
-  // Zustände für das UI
-  bool _isLoading = false; // zeigt Ladeindikator an, während Firebase arbeitet
+  bool _isLoading = false;
   bool _isLogin =
-      true; // steuert, ob Login- oder Registrierungsmodus angezeigt wird
+      true;
 
-  // Hilfsfunktion: Zeigt eine Fehlermeldung unten im Screen als SnackBar
+  // Show Error Message as SnackBar
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
-  // Hilfsfunktion: Navigation nach erfolgreichem Login/Registrierung
+  // Navigate after Login/Register
   void _navigateOnSuccess() {
     Navigator.pushReplacement(
       context,
@@ -46,42 +37,41 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Kernfunktion: Wird ausgeführt, wenn User auf Login/Register klickt
+  // Check Login/Registration on Button click
   Future<void> _submit() async {
-    // 1. Validierung prüfen (z.B. Email Format, Passwortlänge)
+    // Validate Email Format and Password Length
     if (!_formKey.currentState!.validate()) return;
 
-    // Ladezustand aktivieren (Button deaktivieren und Spinner anzeigen)
-    // setState() → build() wird erneut aufgerufen.
+    // Activate "loading" State for Animation
     setState(() => _isLoading = true);
 
     try {
       final auth = FirebaseAuth.instance; // Firebase Auth Instanz holen
 
       if (_isLogin) {
-        // Login mit Email + Passwort
+        // Login with Email + Passwort
         await auth.signInWithEmailAndPassword(
-          email: _emailCtrl.text.trim(), // trim entfernt unnötige Leerzeichen
-          password: _passwordCtrl.text.trim(),
+          email: _emailCtrl.text.trim(), // remove unneeded spaces
+          password: _passwordCtrl.text.trim(), // remove unneeded spaces
         );
       } else {
-        // Registrierung mit Email + Passwort
+        // Registrierung with Email + Passwort
         await auth.createUserWithEmailAndPassword(
-          email: _emailCtrl.text.trim(),
-          password: _passwordCtrl.text.trim(),
+          email: _emailCtrl.text.trim(), // remove unneeded spaces
+          password: _passwordCtrl.text.trim(), // remove unneeded spaces
         );
       }
 
-      // Wenn erfolgreich -> Navigation zum NotesScreen
+      // Navigate to HomeScreen on Success
       _navigateOnSuccess();
     } on FirebaseAuthException catch (e) {
-      // Bekannte Fehler (z.B. falsches Passwort, User existiert nicht)
+      // Return Error on Known Error
       _showError(e.message ?? 'Authentication failed.');
     } catch (e) {
-      // Unbekannte Fehler (z.B. Netzwerkprobleme)
+      // Return Error on unknown Error
       _showError('An unexpected error occurred.');
     } finally {
-      // Ladezustand wieder deaktivieren
+      // deactivate Loading state
       setState(() => _isLoading = false);
     }
   }
@@ -91,21 +81,20 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          // ScrollView: verhindert Überlauf bei kleinen Bildschirmen / Tastatur offen
           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
           child: Card(
-            elevation: 8, // Schatteneffekt
+            elevation: 8,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Form(
-                key: _formKey, // verbindet die Eingabefelder mit der Validation
+                key: _formKey, // Connect key to Email/Password Fields
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Titel abhängig von Modus: Login oder Register
+                    // Title based on Login or Register Screen
                     Text(
                       _isLogin ? 'Login' : 'Register',
                       style: TextStyle(
@@ -115,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     SizedBox(height: 20),
 
-                    // Email-Feld
+                    // Email-Field
                     TextFormField(
                       controller: _emailCtrl,
                       decoration: InputDecoration(
@@ -127,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        // Validierung: einfache Prüfung auf '@'
+                        // Simple Validation (check if '@' included)
                         if (value == null || !value.contains('@')) {
                           return 'Enter a valid email.';
                         }
@@ -146,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      obscureText: true, // Passwort wird mit Punkten angezeigt
+                      obscureText: true,
                       validator: (value) {
                         if (value == null || value.length < 6) {
                           return 'Password must be at least 6 characters.';
@@ -161,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _submit,
-                        // Wenn _isLoading true ist -> Button deaktiviert
+                        // Disable Button when _isLoading = true
                         style: ElevatedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -185,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     SizedBox(height: 12),
 
-                    // Umschalter: zwischen Login und Registrieren wechseln
+                    // Button to switch between Login and Register
                     TextButton(
                       onPressed: () => setState(() => _isLogin = !_isLogin),
                       child: Text(

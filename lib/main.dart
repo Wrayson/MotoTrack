@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        debugShowCheckedModeBanner: false, // entfernt das Debug-Banner
+        debugShowCheckedModeBanner: false,
         title: 'MotoTrack', // App-Name, seen in App-Switcher
         // Check if User is logged in and redirect to screen
         home: FirebaseAuth.instance.currentUser == null
