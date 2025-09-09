@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "363702153685",
+    "project_id": "mototrack-hf",
+    "storage_bucket": "mototrack-hf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:363702153685:android:25c0478b5469e1368f4d5c",
+        "android_client_info": {
+          "package_name": "ch.teko.mototrack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAm7lAtYQKBmga0KeM53CXpAODUzL31Brk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
