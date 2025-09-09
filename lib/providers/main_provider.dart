@@ -18,16 +18,12 @@ class MainProvider extends ChangeNotifier {
   // ----------- Live-Metriken -----------
   double _speedKmh = 0;
   double _gForce = 0;
-
-  /// Lean (signed): <0 = LINKS, >0 = RECHTS
   double _leanDeg = 0;
-
   Duration _cornerDur = Duration.zero;
 
   // ----------- Maxima -----------
   double _maxSpeed = 0;
   double _maxG = 0;
-  /// Max Lean als Betrag (|lean|)
   double _maxLean = 0;
   Duration _longestCorner = Duration.zero;
 
@@ -39,24 +35,19 @@ class MainProvider extends ChangeNotifier {
 
   static const Duration _sampleEvery = Duration(milliseconds: 250); // 4 Hz
 
-  /// Falls deine Halterung die Richtung spiegelt, setze das auf true.
-  bool _invertLean = false;
-
   // ----------- Public Getter -----------
   bool get recording => _recording;
   Duration get elapsed => _elapsed;
 
   double get speedKmh => _speedKmh;
   double get gForce => _gForce;
-  double get leanDeg => _leanDeg; // signed
+  double get leanDeg => _leanDeg;
   Duration get cornerDur => _cornerDur;
 
   double get maxSpeed => _maxSpeed;
   double get maxG => _maxG;
   double get maxLean => _maxLean;
   Duration get longestCorner => _longestCorner;
-
-  bool get invertLean => _invertLean;
 
   // ----------- Lifecycle -----------
   @override
@@ -75,9 +66,7 @@ class MainProvider extends ChangeNotifier {
     _endTime = null;
     _elapsed = Duration.zero;
     _cornerDur = Duration.zero;
-    _maxSpeed = 0;
-    _maxG = 0;
-    _maxLean = 0;
+    _maxSpeed = _maxG = _maxLean = 0;
     _longestCorner = Duration.zero;
 
     // UI-Timer (Stoppuhr)
@@ -101,12 +90,14 @@ class MainProvider extends ChangeNotifier {
       _lastPos = pos;
 
       double vMs = (pos.speed.isFinite && pos.speed > 0) ? pos.speed : 0.0;
-      final ts = pos.timestamp?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch;
+      final ts = pos.timestamp?.millisecondsSinceEpoch ??
+          DateTime.now().millisecondsSinceEpoch;
 
       if (prev != null && prevTs != null) {
         final dt = (ts - prevTs!) / 1000.0;
         if (dt > 0) {
-          final d = _haversineMeters(prev!.latitude, prev!.longitude, pos.latitude, pos.longitude);
+          final d = _haversineMeters(
+              prev!.latitude, prev!.longitude, pos.latitude, pos.longitude);
           final vCalc = d / dt;
           if (!(vMs > 0)) {
             vMs = 0.7 * vMs + 0.3 * vCalc; // leichte Glättung
@@ -122,36 +113,34 @@ class MainProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Accelerometer-Stream (signed Lean, deterministisch über X/Z)
+    // Accelerometer-Stream
     _accSub?.cancel();
     _accSub = accelerometerEventStream().listen((acc) {
-      // g-Force (Betrag)
-      final g = math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z) / 9.81;
+      final g =
+          math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z) / 9.81;
       _gForce = g;
       if (g > _maxG) _maxG = g;
 
-      // ---- Lean-Bestimmung: NUR X vs Z, mit definierter Richtung ----
-      // Landscape-Mount: Roll ist primär die X-Achse (links/rechts).
-      // Wir definieren: Rechts kippen => positiver Lean.
-      // Dafür funktioniert in der Praxis: lean = -atan2(x, z).
-      double leanRad = -math.atan2(acc.x, acc.z);
+      // Lean quer (links/rechts): ay vs az
+      /*
+      final leanRad = math.atan2(acc.y, acc.z);
+      _leanDeg = (leanRad.abs() * 180 / math.pi);
+      if (_leanDeg > _maxLean) _maxLean = _leanDeg;*/
 
-      // Optional Vorzeichen invertieren, falls Halterung spiegelverkehrt
-      if (_invertLean) leanRad = -leanRad;
-
-      // In Grad
-      _leanDeg = leanRad * 180.0 / math.pi;
-
-      // Maxima als Betrag
-      final absLean = _leanDeg.abs();
-      if (absLean > _maxLean) _maxLean = absLean;
+      final leanRad = math.atan2(acc.y, acc.z);
+      final leanDegSigned = (leanRad * 180 / math.pi);
+      _leanDeg = leanDegSigned;                // Vorzeichen behalten!
+      if (leanDegSigned.abs() > _maxLean) {
+        _maxLean = leanDegSigned.abs();        // Max weiterhin als Betrag erfassen
+      }
 
       notifyListeners();
     });
 
-    // Sampler: Corner-Dauer (Schwelle 25°; Betrag vergleichen)
+    // Sampler: Corner-Dauer
     _sampler?.cancel();
     _sampler = Timer.periodic(_sampleEvery, (_) {
+      //final inCorner = _leanDeg >= 25.0;
       final inCorner = _leanDeg.abs() >= 25.0;
       if (inCorner) {
         _cornerDur += _sampleEvery;
@@ -191,7 +180,8 @@ class MainProvider extends ChangeNotifier {
           .doc(uid)
           .collection('rides');
 
-      final durationMs = _endTime!.millisecondsSinceEpoch - _startTime!.millisecondsSinceEpoch;
+      final durationMs =
+          _endTime!.millisecondsSinceEpoch - _startTime!.millisecondsSinceEpoch;
 
       await ridesCol.add({
         'title': title,
@@ -200,9 +190,10 @@ class MainProvider extends ChangeNotifier {
         'endedAt': _endTime!.millisecondsSinceEpoch,
         'duration': _fmtDur(Duration(milliseconds: durationMs)),
         'highestSpeedKmh': _round(_maxSpeed, 2),
-        'highestLeanDeg': _round(_maxLean, 1), // Betrag
+        'highestLeanDeg': _round(_maxLean, 1),
         'highestG': _round(_maxG, 3),
-        'longestCornerSec': (_longestCorner.inMilliseconds / 1000.0).toStringAsFixed(1),
+        'longestCornerSec':
+        (_longestCorner.inMilliseconds / 1000.0).toStringAsFixed(1),
         'createdAt': _endTime!.millisecondsSinceEpoch,
       });
     }
@@ -230,7 +221,8 @@ class MainProvider extends ChangeNotifier {
     if (perm == LocationPermission.denied) {
       perm = await Geolocator.requestPermission();
     }
-    return perm == LocationPermission.whileInUse || perm == LocationPermission.always;
+    return perm == LocationPermission.whileInUse ||
+        perm == LocationPermission.always;
   }
 
   String _fmtDur(Duration d) {
@@ -250,20 +242,17 @@ class MainProvider extends ChangeNotifier {
   double _round(double v, int digits) => double.parse(v.toStringAsFixed(digits));
   double _deg2rad(double d) => d * (math.pi / 180.0);
 
-  double _haversineMeters(double lat1, double lon1, double lat2, double lon2) {
+  double _haversineMeters(
+      double lat1, double lon1, double lat2, double lon2) {
     const R = 6371000.0;
     final dLat = _deg2rad(lat2 - lat1);
     final dLon = _deg2rad(lon2 - lon1);
     final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_deg2rad(lat1)) * math.cos(_deg2rad(lat2)) *
-            math.sin(dLon / 2) * math.sin(dLon / 2);
+        math.cos(_deg2rad(lat1)) *
+            math.cos(_deg2rad(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return R * c;
-  }
-
-  // ----------- Optional: Richtung umschalten (falls nötig) -----------
-  void toggleInvertLean() {
-    _invertLean = !_invertLean;
-    notifyListeners();
   }
 }

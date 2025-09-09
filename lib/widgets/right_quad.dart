@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:mototrack/widgets/lean_gauge_bidir.dart';
 import 'metric_card.dart';
-import 'lean_gauge.dart';
 import 'gforce_gauge.dart';
+import 'lean_gauge_bidir.dart';
 
 class RightQuad extends StatelessWidget {
   final double leanDeg;
