@@ -17,7 +17,7 @@ class _StartRideScreenState extends State<StartRideScreen> {
   @override
   void initState() {
     super.initState();
-    // Querformat einrasten, UI-Ränder freigeben
+    // Set Orientation to Landscape
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -27,7 +27,7 @@ class _StartRideScreenState extends State<StartRideScreen> {
 
   @override
   void dispose() {
-    // Orientierung zurücksetzen (Provider kümmert sich um Streams)
+    // Reset Orientation
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     super.dispose();
   }

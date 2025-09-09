@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/main_provider.dart';
 import 'ride_detail_screen.dart';
 
 class HistoryRideScreen extends StatelessWidget {
@@ -9,19 +10,15 @@ class HistoryRideScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-    final ridesCol = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('rides')
-        .orderBy('createdAt', descending: true);
+    // Use provider's stream instead of building the query here
+    final ridesStream = context.watch<MainProvider>().ridesStream;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fahrthistorie'),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: ridesCol.snapshots(),
+        stream: ridesStream,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -66,7 +63,7 @@ class HistoryRideScreen extends StatelessWidget {
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
                   tooltip: 'Löschen',
-                  onPressed: () => _confirmDelete(context, uid, d.id, title ?? 'Fahrt'),
+                  onPressed: () => _confirmDelete(context, d.id, title ?? 'Fahrt'),
                 ),
               );
             },
@@ -76,9 +73,9 @@ class HistoryRideScreen extends StatelessWidget {
     );
   }
 
+  // Ask user to confirm deletion, then call provider.deleteRide(...)
   static Future<void> _confirmDelete(
       BuildContext context,
-      String uid,
       String rideId,
       String title,
       ) async {
@@ -97,10 +94,8 @@ class HistoryRideScreen extends StatelessWidget {
     if (ok != true) return;
 
     try {
-      await FirebaseFirestore.instance
-          .collection('users').doc(uid)
-          .collection('rides').doc(rideId)
-          .delete();
+      // delegate actual deletion to provider
+      await context.read<MainProvider>().deleteRide(rideId);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -116,6 +111,7 @@ class HistoryRideScreen extends StatelessWidget {
     }
   }
 
+  // Build formatted datetime from milliseconds
   static String _fmtDateTime(int ms) {
     final dt = DateTime.fromMillisecondsSinceEpoch(ms);
     final y = dt.year.toString().padLeft(4, '0');

@@ -273,4 +273,44 @@ class MainProvider extends ChangeNotifier {
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return R * c;
   }
+
+  // Returns the rides collection for the currently signed-in user
+  // NOTE: Assumes user is logged in (as in the rest of your code).
+  CollectionReference<Map<String, dynamic>> _userRidesCol() {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('rides');
+  }
+
+  // Public stream for the ride list (ordered by 'createdAt' descending)
+  // Used by HistoryRideScreen to render the list reactively.
+  Stream<QuerySnapshot<Map<String, dynamic>>> get ridesStream {
+    return _userRidesCol()
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  // Returns a single ride document (for a detail screen, if needed elsewhere)
+  Future<DocumentSnapshot<Map<String, dynamic>>> getRide(String rideId) {
+    return _userRidesCol().doc(rideId).get();
+  }
+
+  // Deletes a ride by id (used by HistoryRideScreen + RideDetailScreen)
+  Future<void> deleteRide(String rideId) async {
+    await _userRidesCol().doc(rideId).delete();
+  }
+
+  // (Optional) Update a ride title – handy if you add "rename" later
+  Future<void> renameRide(String rideId, String newTitle) async {
+    await _userRidesCol().doc(rideId).update({'title': newTitle.trim()});
+  }
+
+// Live stream of a single ride (detail screen can auto-update on changes)
+  Stream<DocumentSnapshot<Map<String, dynamic>>> rideStream(String rideId) {
+    return _userRidesCol().doc(rideId).snapshots();
+  }
+
+
 }

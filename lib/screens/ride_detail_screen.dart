@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/main_provider.dart';
 
 class RideDetailScreen extends StatelessWidget {
   final String rideId;
@@ -8,43 +10,49 @@ class RideDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-    final docRef = FirebaseFirestore.instance
-        .collection('users').doc(uid)
-        .collection('rides').doc(rideId);
+    // Use MainProvider instead of direct Firestore references
+    final provider = context.read<MainProvider>();
+    final rideDocStream = provider.rideStream(rideId); // live updates
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fahrtdetails'),
+        title: const Text('Ride Details'),
         actions: [
           IconButton(
-            tooltip: 'Löschen',
+            tooltip: 'Delete',
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
+              // Confirmation dialog before deletion
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (_) => AlertDialog(
-                  title: const Text('Fahrt löschen?'),
-                  content: const Text('Diese Fahrt wird dauerhaft entfernt. Fortfahren?'),
+                  title: const Text('Delete Ride?'),
+                  content: const Text('This ride will be permanently removed. Continue?'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
-                    FilledButton.tonal(onPressed: () => Navigator.pop(context, true), child: const Text('Löschen')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton.tonal(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Delete'),
+                    ),
                   ],
                 ),
               );
               if (ok == true) {
                 try {
-                  await docRef.delete();
+                  await provider.deleteRide(rideId); // Business logic in provider
                   if (context.mounted) {
-                    Navigator.pop(context); // zurück zur Liste
+                    Navigator.pop(context); // Go back to ride list
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Fahrt gelöscht.')),
+                      const SnackBar(content: Text('Ride deleted.')),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Löschen fehlgeschlagen: $e')),
+                      SnackBar(content: Text('Failed to delete: $e')),
                     );
                   }
                 }
@@ -53,21 +61,23 @@ class RideDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        future: docRef.get(),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        // Live document stream
+        stream: rideDocStream,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snap.hasError) {
-            return Center(child: Text('Fehler: ${snap.error}'));
+            return Center(child: Text('Error: ${snap.error}'));
           }
           if (!snap.hasData || !snap.data!.exists) {
-            return const Center(child: Text('Fahrt nicht gefunden.'));
+            return const Center(child: Text('Ride not found.'));
           }
 
+          // Extract ride data
           final data = snap.data!.data()!;
-          final title = (data['title'] as String?) ?? 'Fahrt';
+          final title = (data['title'] as String?) ?? 'Ride';
           final dateStr = (data['date'] as String?) ?? '';
           final startedAt = (data['startedAt'] as num?)?.toInt();
           final endedAt = (data['endedAt'] as num?)?.toInt();
@@ -89,10 +99,10 @@ class RideDetailScreen extends StatelessWidget {
                   spacing: 12,
                   runSpacing: 4,
                   children: [
-                    if (dateStr.isNotEmpty) Chip(label: Text('Datum: $dateStr')),
-                    if (duration.isNotEmpty) Chip(label: Text('Dauer: $duration')),
+                    if (dateStr.isNotEmpty) Chip(label: Text('Date: $dateStr')),
+                    if (duration.isNotEmpty) Chip(label: Text('Duration: $duration')),
                     if (startedAt != null) Chip(label: Text('Start: ${_fmtDateTime(startedAt)}')),
-                    if (endedAt != null) Chip(label: Text('Ende: ${_fmtDateTime(endedAt)}')),
+                    if (endedAt != null) Chip(label: Text('End: ${_fmtDateTime(endedAt)}')),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -106,10 +116,10 @@ class RideDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Platzhalter für eine spätere Karten-/Overlay-Ansicht:
+                // Placeholder for future map/overlay feature
                 _PlaceholderCard(
                   title: 'Route & Overlay (Coming Soon)',
-                  subtitle: 'Hier könnte nach der Fahrt die Strecke mit Overlay (Speed/Lean/G) angezeigt werden.',
+                  subtitle: 'In the future, the ride route and overlays (Speed/Lean/G) could be displayed here.',
                   icon: Icons.map_outlined,
                 ),
               ],
@@ -120,6 +130,7 @@ class RideDetailScreen extends StatelessWidget {
     );
   }
 
+  // Format timestamp (milliseconds since epoch) into human-readable datetime
   static String _fmtDateTime(int ms) {
     final dt = DateTime.fromMillisecondsSinceEpoch(ms);
     final y = dt.year.toString().padLeft(4, '0');
@@ -131,6 +142,7 @@ class RideDetailScreen extends StatelessWidget {
   }
 }
 
+// Grid view for ride stats (responsive: 2 or 4 columns)
 class _StatGrid extends StatelessWidget {
   final List<_StatTileData> items;
   const _StatGrid({required this.items});
@@ -158,6 +170,7 @@ class _StatGrid extends StatelessWidget {
   }
 }
 
+// Data class for ride stat tiles
 class _StatTileData {
   final String label;
   final String value;
@@ -165,6 +178,7 @@ class _StatTileData {
   _StatTileData({required this.label, required this.value, required this.icon});
 }
 
+// UI widget for a single stat tile
 class _StatTile extends StatelessWidget {
   final _StatTileData data;
   const _StatTile({required this.data});
@@ -204,6 +218,7 @@ class _StatTile extends StatelessWidget {
   }
 }
 
+// Placeholder card for features not implemented yet
 class _PlaceholderCard extends StatelessWidget {
   final String title;
   final String subtitle;
