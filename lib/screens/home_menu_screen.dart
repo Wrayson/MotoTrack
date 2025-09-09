@@ -42,7 +42,7 @@ class HomeMenuScreen extends StatelessWidget {
               label: 'Fahrthistorie anzeigen',
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const RideHistoryScreen()));
+                    MaterialPageRoute(builder: (_) => const HistoryRideScreen()));
               },
             ),
             const Spacer(),
