@@ -119,7 +119,7 @@ class RideDetailScreen extends StatelessWidget {
                 // Placeholder for future map/overlay feature
                 _PlaceholderCard(
                   title: 'Route & Overlay (Coming Soon)',
-                  subtitle: 'In the future, the ride route and overlays (Speed/Lean/G) could be displayed here.',
+                  subtitle: 'In dieser Box wird Zukünftig eine Routenansicht/Map-Overlay auffindbar sein.',
                   icon: Icons.map_outlined,
                 ),
               ],
