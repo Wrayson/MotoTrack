@@ -132,9 +132,6 @@ class _LeanArcPainter extends CustomPainter {
       tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
     }
 
-    drawLabel('-${maxDeg.toStringAsFixed(0)}°', center + Offset(-radius, 0));
-    drawLabel('0°', center + Offset(0, -radius - stroke * 0.2));
-    drawLabel('+${maxDeg.toStringAsFixed(0)}°', center + Offset(radius, 0));
   }
 
   @override
