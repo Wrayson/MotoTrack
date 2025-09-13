@@ -66,10 +66,10 @@ class _LoginScreenState extends State<LoginScreen> {
       _navigateOnSuccess();
     } on FirebaseAuthException catch (e) {
       // Return Error on Known Error
-      _showError(e.message ?? 'Authentication failed.');
+      _showError(e.message ?? 'Authentifizierung fehlgeschlagen.');
     } catch (e) {
       // Return Error on unknown Error
-      _showError('An unexpected error occurred.');
+      _showError('Ein unerwarteter Fehler ist aufgetreten: $e');
     } finally {
       // deactivate Loading state
       setState(() => _isLoading = false);
@@ -96,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     // Title based on Login or Register Screen
                     Text(
-                      _isLogin ? 'Login' : 'Register',
+                      _isLogin ? 'Anmelden' : 'Registrieren',
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: (value) {
                         // Simple Validation (check if '@' included)
                         if (value == null || !value.contains('@')) {
-                          return 'Enter a valid email.';
+                          return 'E-Mail-Adresse ist ungültig.';
                         }
                         return null;
                       },
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: true,
                       validator: (value) {
                         if (value == null || value.length < 6) {
-                          return 'Password must be at least 6 characters.';
+                          return 'Passwort muss mindestens 6 Zeichen lang sein.';
                         }
                         return null;
                       },
@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               )
                             : Text(
-                                _isLogin ? 'Login' : 'Register',
+                                _isLogin ? 'Anmelden' : 'Registrieren',
                                 style: TextStyle(fontSize: 16),
                               ),
                       ),
@@ -179,8 +179,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => setState(() => _isLogin = !_isLogin),
                       child: Text(
                         _isLogin
-                            ? "Don't have an account? Register"
-                            : "Already registered? Login",
+                            ? "Noch kein Konto? Registrieren"
+                            : "Du hast ein Konto? Anmelden",
                       ),
                     ),
                   ],

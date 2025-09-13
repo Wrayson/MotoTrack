@@ -174,7 +174,7 @@ class MainProvider extends ChangeNotifier {
       //Check if a custom Title was set
       final title = (customTitle == null || customTitle.trim().isEmpty)
         // If no Custom Title, set 'default' naming scheme with Date
-          ? 'Fahrt ${DateTime.now().toLocal()}'
+          ? 'Fahrt ${fmtDateTime(_startTime!.millisecondsSinceEpoch)}'
           : customTitle.trim();
 
       final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -232,7 +232,7 @@ class MainProvider extends ChangeNotifier {
         perm == LocationPermission.always;
   }
 
-  // Buuld Duration String
+  // Build Duration String
   String _fmtDur(Duration d) {
     final h = d.inHours.toString().padLeft(2, '0');
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -244,8 +244,19 @@ class MainProvider extends ChangeNotifier {
   String _fmtDate(DateTime dt) {
     final y = dt.year.toString().padLeft(4, '0');
     final mo = dt.month.toString().padLeft(2, '0');
-    final da = dt.day.toString().padLeft(2, '0');
-    return '$y-$mo-$da';
+    final dd = dt.day.toString().padLeft(2, '0');
+    return '$dd.$mo.$y';
+  }
+
+  // Format unix timestamp into readable format
+    String fmtDateTime(int ms) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(ms);
+    final y = dt.year.toString().padLeft(4, '0');
+    final mo = dt.month.toString().padLeft(2, '0');
+    final dd = dt.day.toString().padLeft(2, '0');
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return '$dd.$mo.$y $hh:$mm'; // Return European format, dd.mo.YYYY hh:mm
   }
 
   // Rounds number (v) to a defined amount of digits (digits)

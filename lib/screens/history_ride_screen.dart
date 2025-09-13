@@ -11,6 +11,7 @@ class HistoryRideScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Use provider's stream instead of building the query here
+    final provider = context.read<MainProvider>();
     final ridesStream = context.watch<MainProvider>().ridesStream;
 
     return Scaffold(
@@ -83,7 +84,7 @@ class HistoryRideScreen extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Fahrt löschen?'),
-        content: Text('„$title“ wird dauerhaft entfernt. Fortfahren?'),
+        content: Text('"$title" wird dauerhaft entfernt. Fortfahren?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
           FilledButton.tonal(onPressed: () => Navigator.pop(context, true), child: const Text('Löschen')),
@@ -99,7 +100,7 @@ class HistoryRideScreen extends StatelessWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fahrt gelöscht.')),
+          const SnackBar(content: Text('Fahrtaufnahme gelöscht.')),
         );
       }
     } catch (e) {
@@ -111,16 +112,15 @@ class HistoryRideScreen extends StatelessWidget {
     }
   }
 
-  // Build formatted datetime from milliseconds
+  // Format unix timestamp into readable format
   static String _fmtDateTime(int ms) {
     final dt = DateTime.fromMillisecondsSinceEpoch(ms);
     final y = dt.year.toString().padLeft(4, '0');
     final mo = dt.month.toString().padLeft(2, '0');
-    final da = dt.day.toString().padLeft(2, '0');
+    final dd = dt.day.toString().padLeft(2, '0');
     final hh = dt.hour.toString().padLeft(2, '0');
     final mm = dt.minute.toString().padLeft(2, '0');
-    return '$y-$mo-$da $hh:$mm';
-    // Optional: lokale Formatierung mit intl, wenn gewünscht.
+    return '$dd.$mo.$y $hh:$mm'; // Return European format, dd.mo.YYYY hh:mm
   }
 }
 

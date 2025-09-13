@@ -16,26 +16,26 @@ class RideDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ride Details'),
+        title: const Text('Fahrtdetails'),
         actions: [
           IconButton(
-            tooltip: 'Delete',
+            tooltip: 'Löschen',
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
               // Confirmation dialog before deletion
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (_) => AlertDialog(
-                  title: const Text('Delete Ride?'),
-                  content: const Text('This ride will be permanently removed. Continue?'),
+                  title: const Text('Fahrt Löschen?'),
+                  content: const Text('Diese Fahrt wird dauerhaft entfernt. Fortfahren?'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
+                      child: const Text('Abbrechen'),
                     ),
                     FilledButton.tonal(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Delete'),
+                      child: const Text('Löschen'),
                     ),
                   ],
                 ),
@@ -46,13 +46,13 @@ class RideDetailScreen extends StatelessWidget {
                   if (context.mounted) {
                     Navigator.pop(context); // Go back to ride list
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Ride deleted.')),
+                      const SnackBar(content: Text('Fahrtaufnahme gelöscht.')),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to delete: $e')),
+                      SnackBar(content: Text('Konnte Fahrtaufnhame nicht löschen: $e')),
                     );
                   }
                 }
@@ -69,15 +69,15 @@ class RideDetailScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
+            return Center(child: Text('Fehler: ${snap.error}'));
           }
           if (!snap.hasData || !snap.data!.exists) {
-            return const Center(child: Text('Ride not found.'));
+            return const Center(child: Text('Fahrt nicht gefunden.'));
           }
 
           // Extract ride data
           final data = snap.data!.data()!;
-          final title = (data['title'] as String?) ?? 'Ride';
+          final title = (data['title'] as String?) ?? 'Fahrt';
           final dateStr = (data['date'] as String?) ?? '';
           final startedAt = (data['startedAt'] as num?)?.toInt();
           final endedAt = (data['endedAt'] as num?)?.toInt();
@@ -99,28 +99,20 @@ class RideDetailScreen extends StatelessWidget {
                   spacing: 12,
                   runSpacing: 4,
                   children: [
-                    if (dateStr.isNotEmpty) Chip(label: Text('Date: $dateStr')),
-                    if (duration.isNotEmpty) Chip(label: Text('Duration: $duration')),
-                    if (startedAt != null) Chip(label: Text('Start: ${_fmtDateTime(startedAt)}')),
-                    if (endedAt != null) Chip(label: Text('End: ${_fmtDateTime(endedAt)}')),
+                    if (dateStr.isNotEmpty) Chip(label: Text('Datum: $dateStr')),
+                    if (duration.isNotEmpty) Chip(label: Text('Dauer: $duration')),
+                    if (startedAt != null) Chip(label: Text('Start: ${provider.fmtDateTime(startedAt)}')),
+                    if (endedAt != null)   Chip(label: Text('Ende: ${provider.fmtDateTime(endedAt)}')),
                   ],
                 ),
                 const SizedBox(height: 16),
                 _StatGrid(
                   items: [
-                    _StatTileData(label: 'Highest Speed', value: '${maxSpeed.toStringAsFixed(1)} km/h', icon: Icons.speed),
-                    _StatTileData(label: 'Highest Lean',  value: '${maxLean.toStringAsFixed(1)}°',     icon: Icons.rotate_90_degrees_ccw),
-                    _StatTileData(label: 'Highest G',     value: maxG.toStringAsFixed(3),               icon: Icons.blur_circular),
-                    _StatTileData(label: 'Longest Corner',value: '$longestCornerSec s',                 icon: Icons.timeline),
+                    _StatTileData(label: 'Höchste Geschwindigkeit', value: '${maxSpeed.toStringAsFixed(1)} km/h', icon: Icons.speed),
+                    _StatTileData(label: 'Höchste Neigung', value: '${maxLean.toStringAsFixed(1)}°', icon: Icons.rotate_90_degrees_ccw),
+                    _StatTileData(label: 'Höchste G-Kraft', value: maxG.toStringAsFixed(3), icon: Icons.blur_circular),
+                    _StatTileData(label: 'Längste Kurve', value: '$longestCornerSec s', icon: Icons.timeline),
                   ],
-                ),
-                const SizedBox(height: 24),
-
-                // Placeholder for future map/overlay feature
-                _PlaceholderCard(
-                  title: 'Route & Overlay (Coming Soon)',
-                  subtitle: 'In dieser Box wird Zukünftig eine Routenansicht/Map-Overlay auffindbar sein.',
-                  icon: Icons.map_outlined,
                 ),
               ],
             ),
@@ -128,17 +120,6 @@ class RideDetailScreen extends StatelessWidget {
         },
       ),
     );
-  }
-
-  // Format timestamp (milliseconds since epoch) into human-readable datetime
-  static String _fmtDateTime(int ms) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(ms);
-    final y = dt.year.toString().padLeft(4, '0');
-    final mo = dt.month.toString().padLeft(2, '0');
-    final da = dt.day.toString().padLeft(2, '0');
-    final hh = dt.hour.toString().padLeft(2, '0');
-    final mm = dt.minute.toString().padLeft(2, '0');
-    return '$y-$mo-$da $hh:$mm';
   }
 }
 
@@ -209,43 +190,6 @@ class _StatTile extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Placeholder card for features not implemented yet
-class _PlaceholderCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  const _PlaceholderCard({required this.title, required this.subtitle, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: cs.surfaceVariant,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Icon(icon, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 6),
-                Text(subtitle, style: TextStyle(color: cs.onSurfaceVariant)),
               ],
             ),
           ),
