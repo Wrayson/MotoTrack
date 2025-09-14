@@ -286,7 +286,6 @@ class MainProvider extends ChangeNotifier {
   }
 
   // Returns the rides collection for the currently signed-in user
-  // NOTE: Assumes user is logged in (as in the rest of your code).
   CollectionReference<Map<String, dynamic>> _userRidesCol() {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     return FirebaseFirestore.instance
@@ -296,7 +295,6 @@ class MainProvider extends ChangeNotifier {
   }
 
   // Public stream for the ride list (ordered by 'createdAt' descending)
-  // Used by HistoryRideScreen to render the list reactively.
   Stream<QuerySnapshot<Map<String, dynamic>>> get ridesStream {
     return _userRidesCol()
         .orderBy('createdAt', descending: true)
@@ -313,7 +311,7 @@ class MainProvider extends ChangeNotifier {
     await _userRidesCol().doc(rideId).delete();
   }
 
-  // (Optional) Update a ride title – handy if you add "rename" later
+  // Update a ride title (not implemented)
   Future<void> renameRide(String rideId, String newTitle) async {
     await _userRidesCol().doc(rideId).update({'title': newTitle.trim()});
   }
